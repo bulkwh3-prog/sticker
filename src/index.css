@@ -8,6 +8,12 @@
 
 /* Print utility styles */
 @media print {
+  /* Force color and background graphics printing */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   /* Hide the main app layout completely during print */
   #main-app-layout {
     display: none !important;
@@ -32,13 +38,22 @@
     page-break-after: always !important;
     break-after: page !important;
     display: flex !important;
-    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
     box-sizing: border-box !important;
     background-color: white !important;
     color: black !important;
     margin: 0 !important;
-    padding: 6mm !important; /* Ideal 4x4 margin */
+    padding: 0 !important;
     border: none !important;
+    overflow: hidden !important;
+  }
+
+  /* Scale the unified 294px x 328px layout to fit 4"x4" (101.6mm) perfectly */
+  .sticker-print-page > div {
+    transform: scale(1.1) !important;
+    transform-origin: center center !important;
+    flex-shrink: 0 !important;
   }
 
   @page {

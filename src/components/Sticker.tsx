@@ -25,19 +25,19 @@ export const Sticker: React.FC<StickerProps> = ({ item, isPreview = false }) => 
       className={`font-sans bg-white text-black flex flex-col justify-between select-none box-border ${
         isPreview
           ? "border border-slate-300 shadow-md rounded-xs text-[11px]"
-          : "h-full w-full text-[11px] p-5 border border-black"
+          : "border-2 border-black rounded-none shadow-none text-[11px]"
       }`}
       style={{
         boxSizing: "border-box",
-        width: isPreview ? "294px" : "100%",
-        height: isPreview ? "328px" : "100%",
-        padding: isPreview ? "16px" : "20px",
+        width: "294px",
+        height: "328px",
+        padding: "16px",
       }}
     >
       {/* 1. Header Zone: PCG Badge + Label Title */}
       <div
         className="flex items-center justify-center gap-2 mb-1.5 mt-1 relative"
-        style={isPreview ? { marginBottom: "5px", marginTop: "-11px" } : undefined}
+        style={{ marginBottom: "5px", marginTop: "-11px" }}
       >
         <div className="bg-[#0f2952] text-white text-[9px] md:text-[10px] font-extrabold px-1.5 py-0.5 rounded-xs tracking-wider uppercase absolute left-1">
           PCG
@@ -50,20 +50,16 @@ export const Sticker: React.FC<StickerProps> = ({ item, isPreview = false }) => 
       {/* 2. Top Rounded Box containing the LPN Code */}
       <div
         className="border border-black rounded-lg py-1 px-3 flex items-center justify-center min-h-[48px] h-auto bg-white mb-2"
-        style={
-          isPreview
-            ? {
-                marginLeft: "0px",
-                marginTop: "-8px",
-                paddingRight: "12px",
-                paddingTop: "2px",
-                marginRight: "0px",
-                marginBottom: "-4px",
-                height: "48px",
-                paddingBottom: "4px",
-              }
-            : undefined
-        }
+        style={{
+          marginLeft: "0px",
+          marginTop: "-8px",
+          paddingRight: "12px",
+          paddingTop: "2px",
+          marginRight: "0px",
+          marginBottom: "-4px",
+          height: "48px",
+          paddingBottom: "4px",
+        }}
       >
         <span
           className="font-mono font-extrabold text-black tracking-wider truncate"
@@ -75,13 +71,13 @@ export const Sticker: React.FC<StickerProps> = ({ item, isPreview = false }) => 
 
       {/* 3. Centered QR Code Section */}
       <div className="flex justify-center items-center my-1.5 bg-white">
-        <QRCode value={barcode || lpnCode || "SAMPLE-QRCODE"} size={isPreview ? 90 : 105} isPreview={isPreview} />
+        <QRCode value={barcode || lpnCode || "SAMPLE-QRCODE"} size={90} isPreview={true} />
       </div>
 
       {/* 4. Middle Details: Qty, Weight, Date, Loc, Car License */}
       <div
         className="space-y-1.5 my-1.5 text-black font-sans px-1"
-        style={isPreview ? { marginRight: "0px", marginBottom: "40px" } : undefined}
+        style={{ marginRight: "0px", marginBottom: "40px" }}
       >
         {/* Row 1: Quantity & Weight */}
         <div className="flex justify-between items-baseline">
@@ -133,17 +129,13 @@ export const Sticker: React.FC<StickerProps> = ({ item, isPreview = false }) => 
       {/* 5. Bottom Rounded Box (SAP Code, Name, Lot) */}
       <div
         className="border border-black rounded-xl p-3 bg-white text-left mt-1"
-        style={
-          isPreview
-            ? {
-                width: "260px",
-                height: "79px",
-                marginBottom: "-1px",
-                marginRight: "0px",
-                marginTop: "-41px",
-              }
-            : undefined
-        }
+        style={{
+          width: "260px",
+          height: "79px",
+          marginBottom: "-1px",
+          marginRight: "0px",
+          marginTop: "-41px",
+        }}
       >
         {/* SAP Code Line */}
         <div className="text-[10px] md:text-xs leading-none">
@@ -160,7 +152,7 @@ export const Sticker: React.FC<StickerProps> = ({ item, isPreview = false }) => 
         {/* Lot Line (Huge Number value) */}
         <div
           className="flex items-baseline mt-2 leading-none"
-          style={isPreview ? { marginRight: "0px", marginLeft: "0px", marginTop: "0px" } : undefined}
+          style={{ marginRight: "0px", marginLeft: "0px", marginTop: "0px" }}
         >
           <span className="text-[10px] md:text-xs font-bold">Lot :</span>
           <span className="font-mono font-extrabold text-2xl ml-3 text-black leading-none">
@@ -172,7 +164,7 @@ export const Sticker: React.FC<StickerProps> = ({ item, isPreview = false }) => 
       {/* 6. Legal / System Footer Text */}
       <div
         className="text-[7.5px] md:text-[8px] font-bold text-black tracking-tight mt-2 self-start pl-1 uppercase font-sans"
-        style={isPreview ? { marginTop: "2px" } : undefined}
+        style={{ marginTop: "2px" }}
       >
         F-RM-26-03 Rev.01 บังคับใช้เมื่อวันที่ 10/08/2566
       </div>
