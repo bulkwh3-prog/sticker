@@ -4,9 +4,10 @@ import QRCodeLib from "qrcode";
 interface QRCodeProps {
   value: string;
   size?: number;
+  isPreview?: boolean;
 }
 
-export const QRCode: React.FC<QRCodeProps> = ({ value, size = 100 }) => {
+export const QRCode: React.FC<QRCodeProps> = ({ value, size = 100, isPreview = false }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -34,7 +35,23 @@ export const QRCode: React.FC<QRCodeProps> = ({ value, size = 100 }) => {
 
   return (
     <div className="flex justify-center items-center">
-      <canvas ref={canvasRef} className="max-w-full h-auto" />
+      <canvas
+        ref={canvasRef}
+        className="max-w-full h-auto"
+        style={
+          isPreview
+            ? {
+                fontSize: "11px",
+                lineHeight: "16.5px",
+                height: "81px",
+                width: "82px",
+                marginRight: "0px",
+                marginBottom: "-14px",
+                marginTop: "0px",
+              }
+            : { fontSize: "11px", lineHeight: "16.5px" }
+        }
+      />
     </div>
   );
 };
