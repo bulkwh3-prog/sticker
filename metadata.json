@@ -1,0 +1,6 @@
+{
+  "name": "4x4 Label Printer",
+  "description": "โปรแกรมพิมพ์สติ๊กเกอร์ 4x4 นิ้ว รองรับการนำเข้าไฟล์ Excel สแกนบาร์โค้ดผ่านกล้อง และบันทึกประวัติการพิมพ์ย้อนหลัง",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

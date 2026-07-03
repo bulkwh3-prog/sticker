@@ -1,0 +1,49 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Sarabun:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Sarabun", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Print utility styles */
+@media print {
+  /* Hide the main app layout completely during print */
+  #main-app-layout {
+    display: none !important;
+  }
+  
+  /* Show only the print container */
+  #print-area-container {
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 101.6mm !important;
+    height: 101.6mm !important;
+  }
+
+  .sticker-print-page {
+    width: 101.6mm !important;
+    height: 101.6mm !important;
+    page-break-inside: avoid !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    display: flex !important;
+    flex-direction: column !important;
+    box-sizing: border-box !important;
+    background-color: white !important;
+    color: black !important;
+    margin: 0 !important;
+    padding: 6mm !important; /* Ideal 4x4 margin */
+    border: none !important;
+  }
+
+  @page {
+    size: 101.6mm 101.6mm;
+    margin: 0 !important;
+  }
+}
+
