@@ -234,10 +234,10 @@ export default function App() {
     reader.onload = (event) => {
       try {
         const data = event.target?.result;
-        const workbook = XLSX.read(data, { type: "binary" });
+        const workbook = XLSX.read(data, { type: "binary", cellDates: true });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
-        const json = XLSX.utils.sheet_to_json(sheet);
+        const json = XLSX.utils.sheet_to_json(sheet, { raw: false });
         
         if (json.length === 0) {
           triggerAlert("ไม่พบข้อมูลในไฟล์ Excel ที่อัปโหลด", "error");
@@ -463,7 +463,7 @@ export default function App() {
 
   // Available scanner target fields
   const scanFields = [
-    { key: "barcode", label: "บาร์โค้ด (Barcode)" },
+    { key: "barcode", label: "คิวอาร์โค้ด (QR Code)" },
     { key: "lpnCode", label: "รหัส LPN" },
     { key: "sabCode", label: "SAB Code" },
     { key: "lot", label: "Lot" },
@@ -765,7 +765,7 @@ export default function App() {
 
                       {/* Barcode Value */}
                       <div>
-                        <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">บาร์โค้ดสินค้า (Barcode to print)</label>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">คิวอาร์โค้ดสินค้า (QR Code to print)</label>
                         <div className="flex gap-1.5">
                           <input
                             type="text"
@@ -779,7 +779,7 @@ export default function App() {
                             type="button"
                             onClick={() => openScanner("barcode")}
                             className="px-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-slate-600 transition-colors flex items-center justify-center cursor-pointer"
-                            title="สแกนบาร์โค้ดด้วยกล้อง"
+                            title="สแกน QR Code ด้วยกล้อง"
                           >
                             <Camera className="w-4 h-4" />
                           </button>
@@ -1055,7 +1055,7 @@ export default function App() {
                           <th className="p-3 w-20 text-center">จำนวนสินค้า</th>
                           <th className="p-3 w-24">น้ำหนัก</th>
                           <th className="p-3 w-32 text-center">จำนวนที่ปริ้น (copies)</th>
-                          <th className="p-3 w-24 text-center">บาร์โค้ด</th>
+                          <th className="p-3 w-24 text-center">QR Code</th>
                           <th className="p-3 w-12 text-center">ลบ</th>
                         </tr>
                       </thead>
@@ -1185,7 +1185,7 @@ export default function App() {
                                       type="button"
                                       onClick={() => openScanner("barcode", item.id)}
                                       className="p-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-500 hover:text-slate-700 cursor-pointer"
-                                      title="สแกนอัปเดตบาร์โค้ดแถวนี้"
+                                      title="สแกนอัปเดต QR Code แถวนี้"
                                     >
                                       <Camera className="w-3.5 h-3.5" />
                                     </button>

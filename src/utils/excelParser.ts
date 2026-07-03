@@ -23,6 +23,69 @@ const normalizeKey = (str: string): string => {
 };
 
 /**
+ * Formats Excel date values to standard string formats
+ */
+const formatExcelDate = (value: any): string => {
+  if (value === undefined || value === null) return "";
+
+  // 1. If it's a JavaScript Date object
+  if (value instanceof Date) {
+    if (isNaN(value.getTime())) return "";
+    
+    // Use UTC methods to prevent timezone shifting
+    const d = value.getUTCDate();
+    const m = value.getUTCMonth() + 1;
+    const y = value.getUTCFullYear();
+    return `${m}/${d}/${y}`;
+  }
+
+  // 2. If it's a number (Excel serial date)
+  if (typeof value === "number") {
+    // 25569 is Jan 1st 1970
+    const date = new Date((value - 25569) * 86400 * 1000);
+    if (!isNaN(date.getTime())) {
+      const d = date.getUTCDate();
+      const m = date.getUTCMonth() + 1;
+      const y = date.getUTCFullYear();
+      return `${m}/${d}/${y}`;
+    }
+    return String(value);
+  }
+
+  const strVal = String(value).trim();
+
+  // 3. If it's a serial date represented as a string of a number
+  if (/^\d+(\.\d+)?$/.test(strVal)) {
+    const num = parseFloat(strVal);
+    const date = new Date((num - 25569) * 86400 * 1000);
+    if (!isNaN(date.getTime())) {
+      const d = date.getUTCDate();
+      const m = date.getUTCMonth() + 1;
+      const y = date.getUTCFullYear();
+      return `${m}/${d}/${y}`;
+    }
+  }
+
+  // 4. If it's an ISO date string (e.g. "2025-09-29T00:00:00.000Z")
+  if (strVal.includes("T") && !isNaN(Date.parse(strVal))) {
+    const date = new Date(strVal);
+    const d = date.getUTCDate();
+    const m = date.getUTCMonth() + 1;
+    const y = date.getUTCFullYear();
+    return `${m}/${d}/${y}`;
+  }
+
+  // 5. If it's standard YYYY-MM-DD date, convert to M/D/YYYY
+  const isoMatch = strVal.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (isoMatch) {
+    const [_, y, m, d] = isoMatch;
+    return `${parseInt(m, 10)}/${parseInt(d, 10)}/${y}`;
+  }
+
+  return strVal;
+};
+
+/**
  * Parses raw Excel JSON rows and maps them to standard StickerItem fields
  */
 export const parseExcelRows = (rows: any[]): Omit<StickerItem, "id" | "copies" | "selected">[] => {
@@ -56,6 +119,8 @@ export const parseExcelRows = (rows: any[]): Omit<StickerItem, "id" | "copies" |
         item[fieldKey] = isNaN(parsedQty) ? 0 : parsedQty;
       } else if (fieldKey === "weight") {
         item[fieldKey] = matchedValue !== undefined && matchedValue !== null ? String(matchedValue) : "";
+      } else if (fieldKey === "receiveDate") {
+        item[fieldKey] = formatExcelDate(matchedValue);
       } else {
         item[fieldKey] = matchedValue !== undefined && matchedValue !== null ? String(matchedValue).trim() : "";
       }
@@ -67,7 +132,7 @@ export const parseExcelRows = (rows: any[]): Omit<StickerItem, "id" | "copies" |
       lpnCode: item.lpnCode || "",
       quantity: item.quantity !== undefined ? item.quantity : 0,
       weight: item.weight || "",
-      receiveDate: item.receiveDate || new Date().toISOString().split("T")[0],
+      receiveDate: item.receiveDate || formatExcelDate(new Date()),
       carLicense: item.carLicense || "",
       sabCode: item.sabCode || "",
       productName: item.productName || "ไม่ได้ระบุชื่อสินค้า",

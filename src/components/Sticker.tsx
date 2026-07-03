@@ -1,16 +1,14 @@
 import React from "react";
 import { StickerItem } from "../types";
-import { Barcode } from "./Barcode";
-import { Box, Calendar, Truck, Layers, Tag, Scale } from "lucide-react";
+import { QRCode } from "./QRCode";
 
 interface StickerProps {
   item: StickerItem;
-  isPreview?: boolean; // If true, adds borders/styling for UI; if false, it is formatted purely for thermal printer black-and-white print output.
+  isPreview?: boolean; // If true, formatted for UI preview; if false, fits the 101.6mm x 101.6mm thermal printer layout.
 }
 
 export const Sticker: React.FC<StickerProps> = ({ item, isPreview = false }) => {
   const {
-    title,
     lpnCode,
     quantity,
     weight,
@@ -22,144 +20,100 @@ export const Sticker: React.FC<StickerProps> = ({ item, isPreview = false }) => 
     barcode,
   } = item;
 
-  // Render a clean grid of details for thermal print efficiency
+  // Render a clean, high-contrast label matching the user's reference image perfectly
   return (
     <div
-      className={`sticker-print-page font-sans bg-white text-black flex flex-col justify-between select-none ${
+      className={`font-sans bg-white text-black flex flex-col justify-between select-none box-border ${
         isPreview
-          ? "border-2 border-gray-800 rounded-xl shadow-lg w-full max-w-[360px] h-[360px] p-4 text-xs"
-          : "text-sm h-full w-full"
+          ? "w-full aspect-square p-4 border border-slate-300 shadow-md rounded-xs text-[11px]"
+          : "h-full w-full text-xs"
       }`}
       style={{ boxSizing: "border-box" }}
     >
-      {/* 2. Middle Grid: LPN and Basic Logistics Info */}
-      <div className="grid grid-cols-12 gap-1 border-b border-black pb-1.5 mb-1 text-[11px]">
-        {/* LPN Code (Prominent) */}
-        <div className="col-span-7 border-r border-black pr-1 flex flex-col justify-between">
-          <div className="text-[9px] font-bold text-gray-500 flex items-center gap-1 uppercase">
-            <Tag className="w-2.5 h-2.5" />
-            <span>LPN Code / รหัส LPN</span>
-          </div>
-          <div 
-            className="font-mono font-bold text-md text-black tracking-wider break-all mt-0.5 leading-none"
-            style={{ fontSize: "25px", lineHeight: "42px" }}
-          >
-            {lpnCode || "-"}
-          </div>
+      {/* 1. Header Zone: PCG Badge + Label Title */}
+      <div className="flex items-center gap-2 mb-1.5 justify-start">
+        <div className="bg-[#0f2952] text-white text-[9px] md:text-[10px] font-extrabold px-1.5 py-0.5 rounded-xs tracking-wider uppercase">
+          PCG
         </div>
-
-        {/* Receive Date & License Plate */}
-        <div className="col-span-5 pl-1 flex flex-col justify-between gap-1">
-          <div>
-            <div className="text-[8px] font-bold text-gray-500 flex items-center gap-1 uppercase">
-              <Calendar className="w-2.5 h-2.5" />
-              <span>วันที่รับ (Date)</span>
-            </div>
-            <div 
-              className="font-mono text-black font-bold"
-              style={{ fontSize: "17px" }}
-            >
-              {receiveDate || "-"}
-            </div>
-          </div>
-          <div>
-            <div className="text-[8px] font-bold text-gray-500 flex items-center gap-1 uppercase">
-              <Truck className="w-2.5 h-2.5" />
-              <span>ทะเบียนรถ (Vehicle)</span>
-            </div>
-            <div 
-              className="font-sans text-black font-bold truncate"
-              style={{ fontSize: "13px" }}
-            >
-              {carLicense || "-"}
-            </div>
-          </div>
+        <div className="font-bold text-xs md:text-sm text-black font-sans">
+          ใบป้ายประวัติวัตถุดิบ
         </div>
       </div>
 
-      {/* 3. Product Name (Large, easy-to-read) */}
-      <div className="flex-1 flex flex-col justify-start mb-1 text-[11px]">
-        <div className="text-[9px] font-bold text-gray-500 uppercase flex items-center gap-1 mb-0.5">
-          <Box className="w-2.5 h-2.5" />
-          <span>Product / ชื่อสินค้า</span>
-        </div>
-        <div 
-          className="font-bold text-xs text-black leading-tight line-clamp-2" 
-          title={productName}
-          style={{ 
-            fontSize: "24px",
-            textAlign: "center",
-            marginBottom: "0px",
-            marginRight: "0px",
-            paddingBottom: "0px",
-            paddingRight: "0px",
-            paddingTop: "26px"
-          }}
-        >
-          {productName || "ไม่ได้ระบุชื่อสินค้า"}
-        </div>
+      {/* 2. Top Rounded Box containing the LPN Code */}
+      <div className="border border-black rounded-lg py-1 px-3 flex items-center justify-center h-10 md:h-12 bg-white">
+        <span className="font-mono font-extrabold text-xl md:text-2xl text-black tracking-wider truncate">
+          {lpnCode || "0"}
+        </span>
       </div>
 
-      {/* 4. Sab Code & Lot Info */}
-      <div className="grid grid-cols-2 gap-1 border-t border-b border-black py-1 mb-1 text-[11px]">
-        <div className="border-r border-black pr-1">
-          <div className="text-[8px] font-bold text-gray-500 uppercase">SAB Code</div>
-          <div 
-            className="font-mono font-bold text-xs truncate text-black"
-            style={{ fontSize: "10px" }}
-          >
-            {sabCode || "-"}
-          </div>
-        </div>
-        <div className="pl-1">
-          <div className="text-[8px] font-bold text-gray-500 uppercase flex items-center gap-1">
-            <Layers className="w-2.5 h-2.5 text-gray-400" />
-            <span>Lot / ล็อต</span>
-          </div>
-          <div 
-            className="font-mono font-bold text-xs truncate text-black"
-            style={{ marginLeft: "39px", fontSize: "15px" }}
-          >
-            {lot || "-"}
-          </div>
-        </div>
+      {/* 3. Centered QR Code Section */}
+      <div className="flex justify-center items-center my-1 md:my-1.5">
+        <QRCode value={barcode || lpnCode || "SAMPLE-QRCODE"} size={isPreview ? 85 : 95} />
       </div>
 
-      {/* 5. Quantity & Weight Highlight */}
-      <div className="grid grid-cols-2 gap-1 border-b border-black pb-1.5 mb-1.5">
-        <div className="border-r border-black pr-2 flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-[8px] font-bold text-gray-500 uppercase">Qty / จำนวน</span>
-            <span 
-              className="font-mono font-bold text-lg text-black leading-none mt-0.5"
-              style={{ marginTop: "2px", marginLeft: "44px", fontSize: "21px" }}
-            >
+      {/* 4. Middle Details: Qty, Weight, Date, Loc, Car License */}
+      <div className="space-y-0.5 md:space-y-1 text-black font-sans">
+        {/* Row 1: Quantity & Weight */}
+        <div className="flex justify-between items-baseline px-1">
+          <div className="flex items-baseline">
+            <span className="font-semibold text-[11px] md:text-xs">จำนวน :</span>
+            <span className="font-bold text-xs md:text-sm ml-1.5">
               {quantity !== undefined ? quantity.toLocaleString() : "0"}
             </span>
           </div>
-          <span className="text-[9px] font-semibold text-gray-600 bg-gray-100 px-1 rounded">PCS</span>
-        </div>
-        
-        <div className="pl-2 flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-[8px] font-bold text-gray-500 uppercase flex items-center gap-0.5">
-              <Scale className="w-2.5 h-2.5 text-gray-400" />
-              <span>Weight / น้ำหนัก</span>
-            </span>
-            <span 
-              className="font-mono font-bold text-lg text-black leading-none mt-0.5 truncate"
-              style={{ marginLeft: "37px" }}
-            >
-              {weight || "0"}
-            </span>
+          <div className="flex items-baseline">
+            <span className="font-semibold text-[11px] md:text-xs">น้ำหนัก :</span>
+            <span className="font-bold text-xs md:text-sm ml-1.5">{weight || "0"}</span>
+            <span className="font-bold text-[9px] md:text-[10px] ml-1 uppercase">KG.</span>
           </div>
-          <span className="text-[9px] font-semibold text-gray-600 bg-gray-100 px-1 rounded">KG</span>
+        </div>
+
+        {/* Row 2: Receive Date & Loc */}
+        <div className="flex justify-between items-baseline px-1">
+          <div className="flex items-baseline">
+            <span className="font-semibold text-[11px] md:text-xs">วันที่รับ :</span>
+            <span className="font-bold text-xs md:text-sm ml-1.5">{receiveDate || "-"}</span>
+          </div>
+          <div className="w-1/3 flex items-baseline">
+            <span className="font-semibold text-[11px] md:text-xs">Loc :</span>
+            <span className="font-bold text-xs md:text-sm ml-1.5"></span>
+          </div>
+        </div>
+
+        {/* Row 3: Car License Plate */}
+        <div className="px-1 flex items-baseline">
+          <span className="font-semibold text-[11px] md:text-xs">ทะเบียนรถ :</span>
+          <span className="font-bold text-xs md:text-sm ml-1.5 truncate">{carLicense || "-"}</span>
         </div>
       </div>
 
-      {/* 6. Dynamic Vector Barcode */}
-      <div className="mt-auto">
-        <Barcode value={barcode || lpnCode || "SAMPLE-BARCODE"} height={isPreview ? 36 : 40} />
+      {/* 5. Bottom Rounded Box (SAP Code, Name, Lot) */}
+      <div className="border border-black rounded-lg p-2.5 mt-1.5 bg-white text-left">
+        {/* SAP Code Line */}
+        <div className="text-[10px] md:text-xs leading-none">
+          <span className="font-semibold">SAP Code :</span>
+          <span className="font-mono font-bold ml-1.5">{sabCode || "-"}</span>
+        </div>
+
+        {/* Product Name Line */}
+        <div className="text-[10px] md:text-xs leading-tight mt-1.5 line-clamp-2 min-h-[1.5em]" title={productName}>
+          <span className="font-semibold">Name:</span>
+          <span className="font-bold ml-1.5">{productName || "ไม่ได้ระบุชื่อสินค้า"}</span>
+        </div>
+
+        {/* Lot Line (Huge Number value) */}
+        <div className="flex items-baseline mt-1 leading-none">
+          <span className="text-[10px] md:text-xs font-semibold">Lot :</span>
+          <span className="font-mono font-extrabold text-lg md:text-xl ml-2 text-black leading-none">
+            {lot || "0"}
+          </span>
+        </div>
+      </div>
+
+      {/* 6. Legal / System Footer Text */}
+      <div className="text-[7.5px] md:text-[8px] font-medium text-black tracking-tight mt-1 self-start pl-1 uppercase font-sans">
+        F-RM-26-03 Rev.01 บังคับใช้เมื่อวันที่ 10/08/2566
       </div>
     </div>
   );
