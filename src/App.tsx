@@ -32,7 +32,8 @@ import {
   ChevronRight,
   ClipboardList,
   Flame,
-  UserCheck
+  UserCheck,
+  Calendar
 } from "lucide-react";
 
 export default function App() {
@@ -41,6 +42,33 @@ export default function App() {
   const [history, setHistory] = useState<PrintHistoryEntry[]>([]);
   const [activePreviewId, setActivePreviewId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterDate, setFilterDate] = useState<string>("all");
+
+  const shiftFilterDate = (days: number) => {
+    let currentBaseDateStr = filterDate;
+    if (filterDate === "all") {
+      if (stickers.length > 0) {
+        const dates = stickers.map(s => s.receiveDate).filter(Boolean);
+        if (dates.length > 0) {
+          currentBaseDateStr = dates.sort().reverse()[0];
+        } else {
+          currentBaseDateStr = new Date().toISOString().split("T")[0];
+        }
+      } else {
+        currentBaseDateStr = new Date().toISOString().split("T")[0];
+      }
+    }
+
+    try {
+      const d = new Date(currentBaseDateStr);
+      if (isNaN(d.getTime())) return;
+      d.setDate(d.getDate() + days);
+      const newDateStr = d.toISOString().split("T")[0];
+      setFilterDate(newDateStr);
+    } catch (e) {
+      console.error(e);
+    }
+  };
   
   // Form states
   const [formData, setFormData] = useState<Omit<StickerItem, "id" | "copies" | "selected">>({
@@ -445,6 +473,12 @@ export default function App() {
 
   // Filter labels based on search
   const filteredStickers = stickers.filter(item => {
+    // 1. Filter by date if a specific date is active
+    if (filterDate && filterDate !== "all") {
+      if (item.receiveDate !== filterDate) return false;
+    }
+
+    // 2. Filter by search query
     const query = searchQuery.toLowerCase().trim();
     if (!query) return true;
     return (
@@ -1006,35 +1040,155 @@ export default function App() {
                 <div className="bg-white border border-slate-200/60 rounded-3xl shadow-xs overflow-hidden">
                   
                   {/* Table Controls */}
-                  <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-3">
-                    <div className="relative w-full sm:w-72">
-                      <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        placeholder="ค้นหาตามสินค้า, LPN, บาร์โค้ด..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 bg-slate-50/50 focus:bg-white text-xs text-slate-800 transition-all"
-                      />
+                  <div className="p-4 border-b border-slate-100 flex flex-col gap-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
+                      <div className="relative w-full sm:w-72">
+                        <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          placeholder="ค้นหาตามสินค้า, LPN, บาร์โค้ด..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 bg-slate-50/50 focus:bg-white text-xs text-slate-800 transition-all"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                        <button
+                          type="button"
+                          onClick={deleteSelectedStickers}
+                          className="flex items-center gap-1 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>ลบที่เลือก</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={clearAllStickers}
+                          className="flex items-center gap-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                        >
+                          <span>ล้างทั้งหมด</span>
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                      <button
-                        type="button"
-                        onClick={deleteSelectedStickers}
-                        className="flex items-center gap-1 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 rounded-xl text-xs font-bold transition-all cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>ลบที่เลือก</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={clearAllStickers}
-                        className="flex items-center gap-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
-                      >
-                        <span>ล้างทั้งหมด</span>
-                      </button>
+                    {/* Date Browser Row ("ย้อนดูวัน") */}
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 pt-3 border-t border-slate-100/50">
+                      <div className="flex items-center gap-1.5 flex-wrap w-full md:w-auto">
+                        <div className="flex items-center gap-1 text-slate-600 font-bold text-xs mr-1 bg-slate-100 px-2.5 py-1.5 rounded-xl border border-slate-200/50">
+                          <Calendar className="w-3.5 h-3.5 text-indigo-600 animate-pulse" />
+                          <span>ย้อนดูวัน:</span>
+                        </div>
+                        
+                        <button
+                          type="button"
+                          onClick={() => setFilterDate("all")}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            filterDate === "all"
+                              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/15"
+                              : "bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200"
+                          }`}
+                        >
+                          แสดงทั้งหมด
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setFilterDate(new Date().toISOString().split("T")[0])}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            filterDate === new Date().toISOString().split("T")[0]
+                              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/15"
+                              : "bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200"
+                          }`}
+                        >
+                          วันนี้
+                        </button>
+
+                        {(() => {
+                          const yesterday = new Date();
+                          yesterday.setDate(yesterday.getDate() - 1);
+                          const yesterdayStr = yesterday.toISOString().split("T")[0];
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => setFilterDate(yesterdayStr)}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                filterDate === yesterdayStr
+                                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/15"
+                                  : "bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200"
+                              }`}
+                            >
+                              เมื่อวาน
+                            </button>
+                          );
+                        })()}
+                      </div>
+
+                      <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end">
+                        <button
+                          type="button"
+                          onClick={() => shiftFilterDate(-1)}
+                          className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-600 text-xs font-bold transition-all cursor-pointer"
+                          title="ย้อนหลัง 1 วัน"
+                        >
+                          &larr; วันก่อนหน้า
+                        </button>
+
+                        <input
+                          type="date"
+                          value={filterDate === "all" ? "" : filterDate}
+                          onChange={(e) => setFilterDate(e.target.value || "all")}
+                          className="px-2.5 py-1 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 font-mono font-bold bg-white"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() => shiftFilterDate(1)}
+                          className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-600 text-xs font-bold transition-all cursor-pointer"
+                          title="ถัดไป 1 วัน"
+                        >
+                          วันถัดไป &rarr;
+                        </button>
+                      </div>
                     </div>
+
+                    {/* Quick Unique Date Badges */}
+                    {stickers.length > 0 && (
+                      <div className="flex items-center gap-1.5 text-xs overflow-x-auto py-1 scrollbar-thin">
+                        <span className="text-slate-400 font-bold whitespace-nowrap">ประวัติวันที่พบในตาราง:</span>
+                        {(Array.from(new Set(stickers.map(s => s.receiveDate).filter(Boolean))) as string[])
+                          .sort()
+                          .reverse()
+                          .map((dateStr) => {
+                            const count = stickers.filter(s => s.receiveDate === dateStr).length;
+                            const isSelected = filterDate === dateStr;
+                            
+                            let formattedDate = dateStr;
+                            try {
+                              const parts = dateStr.split("-");
+                              if (parts.length === 3) {
+                                formattedDate = `${parts[2]}/${parts[1]}/${parseInt(parts[0]) + 543}`;
+                              }
+                            } catch (e) {}
+
+                            return (
+                              <button
+                                key={dateStr}
+                                type="button"
+                                onClick={() => setFilterDate(isSelected ? "all" : dateStr)}
+                                className={`px-2.5 py-1 rounded-lg font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 border ${
+                                  isSelected 
+                                    ? "bg-indigo-50 text-indigo-700 border-indigo-200" 
+                                    : "bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200/50"
+                                }`}
+                              >
+                                <span>{formattedDate}</span>
+                                <span className="bg-white/80 px-1.5 py-0.2 rounded font-mono font-bold text-[10px] text-slate-500 shadow-3xs">{count}</span>
+                              </button>
+                            );
+                          })}
+                      </div>
+                    )}
                   </div>
 
                   {/* Actual spreadsheet grid */}
