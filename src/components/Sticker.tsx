@@ -62,8 +62,8 @@ export const Sticker: React.FC<StickerProps> = ({ item, isPreview = false }) => 
         }}
       >
         <span
-          className="font-mono font-extrabold text-black tracking-wider truncate"
-          style={{ fontSize: "38px" }}
+          className="font-extrabold text-black tracking-wider truncate"
+          style={{ fontSize: "38px", fontFamily: "Times New Roman" }}
         >
           {lpnCode || "0"}
         </span>
@@ -144,9 +144,13 @@ export const Sticker: React.FC<StickerProps> = ({ item, isPreview = false }) => 
         </div>
 
         {/* Product Name Line */}
-        <div className="text-[10px] md:text-xs leading-tight mt-2 line-clamp-2 min-h-[1.5em]" title={productName}>
+        <div
+          className="text-[10px] md:text-xs leading-tight mt-2 line-clamp-2 min-h-[1.5em]"
+          title={productName}
+          style={{ width: "238px", height: "23px" }}
+        >
           <span className="font-bold">Name:</span>
-          <span className="font-extrabold ml-1.5" style={{ fontSize: "18px" }}>{productName || "ไม่ได้ระบุชื่อสินค้า"}</span>
+          <span className="font-extrabold ml-1.5" style={{ fontSize: "14px" }}>{productName || "ไม่ได้ระบุชื่อสินค้า"}</span>
         </div>
 
         {/* Lot Line (Huge Number value) */}
@@ -155,7 +159,7 @@ export const Sticker: React.FC<StickerProps> = ({ item, isPreview = false }) => 
           style={{ marginRight: "0px", marginLeft: "0px", marginTop: "0px" }}
         >
           <span className="text-[10px] md:text-xs font-bold">Lot :</span>
-          <span className="font-mono font-extrabold text-2xl ml-3 text-black leading-none" style={{ fontSize: "22px" }}>
+          <span className="font-mono font-extrabold text-2xl ml-3 text-black leading-none" style={{ fontSize: "17px" }}>
             {lot || "0"}
           </span>
         </div>
