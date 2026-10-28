@@ -10,6 +10,7 @@ export interface StickerItem {
   quantity: number;    // จำนวน
   weight: string;      // น้ำหนัก (เช่น "12.5 kg" หรือตัวเลข)
   receiveDate: string;  // วันที่รับ
+  expireDate: string;   // วันหมดอายุ (Expiry Date)
   carLicense: string;  // ทะเบียนรถ
   sabCode: string;     // SAB Code
   productName: string; // ชื่อสินค้า

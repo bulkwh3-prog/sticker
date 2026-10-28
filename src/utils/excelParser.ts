@@ -8,6 +8,7 @@ const HEADER_MAPPINGS: Record<keyof Omit<StickerItem, "id" | "copies" | "selecte
   quantity: ["จำนวน", "qty", "quantity", "count", "ยอด", "จำนวนชิ้น", "pcs", "units", "pack"],
   weight: ["น้ำหนัก", "weight", "wt", "kg", "น้ำหนักสุทธิ", "weight_kg", "นํ้าหนัก"],
   receiveDate: ["วันที่รับ", "date", "receive date", "receive_date", "วันที่", "rec date", "วันที่นำเข้า", "วันที่รับสินค้า"],
+  expireDate: ["วันหมดอายุ", "วันสิ้นอายุ", "หมดอายุ", "expire date", "expire_date", "expiry date", "expiry_date", "expiration date", "exp date", "exp_date", "exp", "bbd", "best before"],
   carLicense: ["ทะเบียนรถ", "ทะเบียน", "car", "vehicle", "license plate", "truck no", "ทะเบียนรถยนต์", "car_license", "ยานพาหนะ"],
   sabCode: ["sab code", "sab", "รหัส sab", "sabcode", "sab_code", "รหัสเอสเออบี"],
   productName: ["ชื่อสินค้า", "ชื่อ", "product", "product name", "product_name", "รายการ", "ชื่อสินค้า/รายละเอียด", "description", "item"],
@@ -119,7 +120,7 @@ export const parseExcelRows = (rows: any[]): Omit<StickerItem, "id" | "copies" |
         item[fieldKey] = isNaN(parsedQty) ? 0 : parsedQty;
       } else if (fieldKey === "weight") {
         item[fieldKey] = matchedValue !== undefined && matchedValue !== null ? String(matchedValue) : "";
-      } else if (fieldKey === "receiveDate") {
+      } else if (fieldKey === "receiveDate" || fieldKey === "expireDate") {
         item[fieldKey] = formatExcelDate(matchedValue);
       } else {
         item[fieldKey] = matchedValue !== undefined && matchedValue !== null ? String(matchedValue).trim() : "";
@@ -133,6 +134,7 @@ export const parseExcelRows = (rows: any[]): Omit<StickerItem, "id" | "copies" |
       quantity: item.quantity !== undefined ? item.quantity : 0,
       weight: item.weight || "",
       receiveDate: item.receiveDate || formatExcelDate(new Date()),
+      expireDate: item.expireDate || "",
       carLicense: item.carLicense || "",
       sabCode: item.sabCode || "",
       productName: item.productName || "ไม่ได้ระบุชื่อสินค้า",
@@ -153,6 +155,7 @@ export const downloadTemplate = () => {
       "จำนวน": 120,
       "น้ำหนัก": "18.5 kg",
       "วันที่รับ": "2026-07-02",
+      "วันหมดอายุ": "2027-07-02",
       "ทะเบียนรถ": "70-1234 กทม",
       "SAB Code": "SAB-A101",
       "ชื่อสินค้า": "กล่องบรรจุภัณฑ์อะลูมิเนียมเกรดพรีเมียม (Size M)",
@@ -165,6 +168,7 @@ export const downloadTemplate = () => {
       "จำนวน": 80,
       "น้ำหนัก": "12.0 kg",
       "วันที่รับ": "2026-07-02",
+      "วันหมดอายุ": "2027-01-15",
       "ทะเบียนรถ": "80-5678 สมุทรปราการ",
       "SAB Code": "SAB-B202",
       "ชื่อสินค้า": "สายไฟทองแดงแกนเดี่ยว ความยาว 50 เมตร",
@@ -177,6 +181,7 @@ export const downloadTemplate = () => {
       "จำนวน": 300,
       "น้ำหนัก": "5.2 kg",
       "วันที่รับ": "2026-07-03",
+      "วันหมดอายุ": "2028-12-31",
       "ทะเบียนรถ": "70-1234 กทม",
       "SAB Code": "SAB-A102",
       "ชื่อสินค้า": "ข้อต่อท่อประปา PVC สามทาง 1 นิ้ว",
@@ -196,6 +201,7 @@ export const downloadTemplate = () => {
     { wch: 10 }, // จำนวน
     { wch: 12 }, // น้ำหนัก
     { wch: 15 }, // วันที่รับ
+    { wch: 15 }, // วันหมดอายุ
     { wch: 18 }, // ทะเบียนรถ
     { wch: 14 }, // SAB Code
     { wch: 35 }, // ชื่อสินค้า

@@ -13,6 +13,7 @@ export const Sticker: React.FC<StickerProps> = ({ item, isPreview = false }) => 
     quantity,
     weight,
     receiveDate,
+    expireDate,
     carLicense,
     sabCode,
     productName,
@@ -107,15 +108,24 @@ export const Sticker: React.FC<StickerProps> = ({ item, isPreview = false }) => 
           </div>
         </div>
 
-        {/* Row 2: Receive Date & Loc */}
+        {/* Row 2: Receive Date & Loc / Expire Date */}
         <div className="flex justify-between items-baseline">
           <div className="flex items-baseline">
             <span className="font-bold text-[11px] md:text-xs">วันที่รับ :</span>
             <span className="font-extrabold text-xs md:text-sm ml-1.5">{receiveDate || "-"}</span>
           </div>
-          <div className="flex items-baseline" style={{ marginRight: "35px" }}>
-            <span className="font-bold text-[11px] md:text-xs">Loc :</span>
-            <span className="font-extrabold text-xs md:text-sm ml-1.5"></span>
+          <div className="flex items-baseline" style={{ marginRight: expireDate ? "0px" : "35px" }}>
+            {expireDate ? (
+              <>
+                <span className="font-bold text-[10px] md:text-[11px] text-red-700">หมดอายุ :</span>
+                <span className="font-extrabold text-xs md:text-sm ml-1 text-red-700">{expireDate}</span>
+              </>
+            ) : (
+              <>
+                <span className="font-bold text-[11px] md:text-xs">Loc :</span>
+                <span className="font-extrabold text-xs md:text-sm ml-1.5"></span>
+              </>
+            )}
           </div>
         </div>
 

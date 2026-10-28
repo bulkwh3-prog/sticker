@@ -49,6 +49,7 @@ export default function App() {
     quantity: 1,
     weight: "",
     receiveDate: new Date().toISOString().split("T")[0],
+    expireDate: "",
     carLicense: "",
     sabCode: "",
     productName: "",
@@ -100,6 +101,7 @@ export default function App() {
         quantity: 150,
         weight: "22.4 kg",
         receiveDate: new Date().toISOString().split("T")[0],
+        expireDate: "2027-07-02",
         carLicense: "70-9876 เชียงใหม่",
         sabCode: "SAB-Z802",
         productName: "น้ำผลไม้เข้มข้นรสส้ม ตราสวีทออเรนจ์ ขนาด 1L",
@@ -168,13 +170,14 @@ export default function App() {
     setStickers(prev => [newItem, ...prev]);
     setActivePreviewId(newItem.id);
     
-    // Clear form but keep Header, Date, SAB Code, Quantity & Weight for fast sequential entries
+    // Clear form but keep Header, Dates, SAB Code, Quantity & Weight for fast sequential entries
     setFormData(prev => ({
       title: prev.title,
       lpnCode: "",
       quantity: prev.quantity,
       weight: prev.weight,
       receiveDate: prev.receiveDate,
+      expireDate: prev.expireDate,
       carLicense: prev.carLicense,
       sabCode: prev.sabCode,
       productName: "",
@@ -454,7 +457,8 @@ export default function App() {
       item.title.toLowerCase().includes(query) ||
       item.sabCode.toLowerCase().includes(query) ||
       item.lot.toLowerCase().includes(query) ||
-      item.carLicense.toLowerCase().includes(query)
+      item.carLicense.toLowerCase().includes(query) ||
+      (item.expireDate && item.expireDate.toLowerCase().includes(query))
     );
   });
 
@@ -465,6 +469,7 @@ export default function App() {
   const scanFields = [
     { key: "barcode", label: "คิวอาร์โค้ด (QR Code)" },
     { key: "lpnCode", label: "รหัส LPN" },
+    { key: "expireDate", label: "วันหมดอายุ (EXP Date)" },
     { key: "sabCode", label: "SAB Code" },
     { key: "lot", label: "Lot" },
     { key: "carLicense", label: "ทะเบียนรถ" },
@@ -694,6 +699,11 @@ export default function App() {
                             <div className="truncate pr-2">
                               <span className="block font-mono font-bold text-slate-700 text-[11px]">{item.lpnCode || "(ไม่มี LPN)"}</span>
                               <span className="block text-slate-500 font-medium truncate text-[10px]">{item.productName}</span>
+                              {item.expireDate && (
+                                <span className="text-[9px] text-red-600 font-semibold font-mono block">
+                                  EXP: {item.expireDate}
+                                </span>
+                              )}
                             </div>
                             <span className="text-[9px] bg-slate-200/80 text-slate-700 px-1.5 py-0.5 rounded font-mono font-bold whitespace-nowrap">
                               x{item.copies}
@@ -871,6 +881,76 @@ export default function App() {
                           onChange={handleInputChange}
                           className="w-full bg-slate-50/50 hover:bg-slate-50 focus:bg-white text-slate-800 border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 rounded-xl py-2 px-3.5 transition-all text-xs font-mono focus:outline-none"
                         />
+                      </div>
+
+                      {/* Expire Date */}
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">วันหมดอายุ (Expire Date)</label>
+                          {formData.expireDate && (
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, expireDate: "" }))}
+                              className="text-[9px] text-red-500 hover:text-red-700 cursor-pointer font-semibold"
+                            >
+                              ล้าง
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex gap-1.5">
+                          <input
+                            type="date"
+                            name="expireDate"
+                            value={formData.expireDate}
+                            onChange={handleInputChange}
+                            className="flex-1 min-w-0 bg-slate-50/50 hover:bg-slate-50 focus:bg-white text-slate-800 border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 rounded-xl py-2 px-3.5 transition-all text-xs font-mono focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => openScanner("expireDate")}
+                            className="px-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-slate-600 transition-colors flex items-center justify-center cursor-pointer"
+                            title="สแกนวันหมดอายุด้วยกล้อง"
+                          >
+                            <Camera className="w-4 h-4" />
+                          </button>
+                        </div>
+                        {/* Quick Presets */}
+                        <div className="mt-1 flex flex-wrap gap-1 items-center">
+                          <span className="text-[9px] font-bold text-slate-400 mr-1">กำหนด:</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const base = formData.receiveDate ? new Date(formData.receiveDate) : new Date();
+                              base.setMonth(base.getMonth() + 6);
+                              setFormData(prev => ({ ...prev, expireDate: base.toISOString().split("T")[0] }));
+                            }}
+                            className="text-[10px] bg-slate-100 hover:bg-indigo-100 hover:text-indigo-600 text-slate-600 px-1.5 py-0.5 rounded font-medium transition-all cursor-pointer"
+                          >
+                            +6 เดือน
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const base = formData.receiveDate ? new Date(formData.receiveDate) : new Date();
+                              base.setFullYear(base.getFullYear() + 1);
+                              setFormData(prev => ({ ...prev, expireDate: base.toISOString().split("T")[0] }));
+                            }}
+                            className="text-[10px] bg-slate-100 hover:bg-indigo-100 hover:text-indigo-600 text-slate-600 px-1.5 py-0.5 rounded font-medium transition-all cursor-pointer"
+                          >
+                            +1 ปี
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const base = formData.receiveDate ? new Date(formData.receiveDate) : new Date();
+                              base.setFullYear(base.getFullYear() + 2);
+                              setFormData(prev => ({ ...prev, expireDate: base.toISOString().split("T")[0] }));
+                            }}
+                            className="text-[10px] bg-slate-100 hover:bg-indigo-100 hover:text-indigo-600 text-slate-600 px-1.5 py-0.5 rounded font-medium transition-all cursor-pointer"
+                          >
+                            +2 ปี
+                          </button>
+                        </div>
                       </div>
 
                       {/* Car License */}
@@ -1052,6 +1132,7 @@ export default function App() {
                           </th>
                           <th className="p-3 w-32">รหัส LPN</th>
                           <th className="p-3">ชื่อสินค้า / ทะเบียน / Lot</th>
+                          <th className="p-3 w-36">วันหมดอายุ (EXP)</th>
                           <th className="p-3 w-20 text-center">จำนวนสินค้า</th>
                           <th className="p-3 w-24">น้ำหนัก</th>
                           <th className="p-3 w-32 text-center">จำนวนที่ปริ้น (copies)</th>
@@ -1062,7 +1143,7 @@ export default function App() {
                       <tbody className="divide-y divide-slate-100">
                         {filteredStickers.length === 0 ? (
                           <tr>
-                            <td colSpan={8} className="py-16 text-center text-slate-400 font-medium">
+                            <td colSpan={9} className="py-16 text-center text-slate-400 font-medium">
                               {searchQuery ? "ไม่พบข้อมูลสติ๊กเกอร์ที่ตรงกับการค้นหา" : "ไม่มีข้อมูลสติ๊กเกอร์คลังสินค้าในตาราง"}
                               <div className="mt-2 text-[11px] text-slate-400">
                                 กรุณากรอกฟอร์มเพื่อบันทึก หรือ คลิกนำเข้าไฟล์ Excel ด้านขวาบน
@@ -1099,7 +1180,7 @@ export default function App() {
                                   />
                                 </td>
 
-                                {/* Metadata fields (ProductName, Vehicle, Lot) */}
+                                {/* Metadata fields (ProductName, Vehicle, Lot, EXP) */}
                                 <td className="p-3">
                                   <div className="max-w-[180px] sm:max-w-xs space-y-1">
                                     <input
@@ -1109,14 +1190,42 @@ export default function App() {
                                       className="w-full font-semibold text-slate-700 bg-transparent hover:bg-slate-100/70 focus:bg-white px-2 py-1 border border-transparent focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 rounded-lg focus:outline-none truncate"
                                       title={item.productName}
                                     />
-                                    <div className="flex gap-1.5 text-[9px] text-slate-500 pl-2">
+                                    <div className="flex flex-wrap gap-1.5 text-[9px] text-slate-500 pl-2">
                                       <span className="bg-slate-100 px-1.5 py-0.5 rounded font-bold max-w-[110px] truncate" title={`ทะเบียนรถ: ${item.carLicense}`}>
                                         รถ: {item.carLicense || "-"}
                                       </span>
                                       <span className="bg-slate-100 px-1.5 py-0.5 rounded font-bold max-w-[90px] truncate" title={`Lot: ${item.lot}`}>
                                         Lot: {item.lot || "-"}
                                       </span>
+                                      {item.expireDate && (
+                                        <span className="bg-red-50 text-red-700 border border-red-100 px-1.5 py-0.5 rounded font-bold truncate" title={`วันหมดอายุ: ${item.expireDate}`}>
+                                          EXP: {item.expireDate}
+                                        </span>
+                                      )}
                                     </div>
+                                  </div>
+                                </td>
+
+                                {/* Expire Date - Inline Edit */}
+                                <td className="p-3">
+                                  <div className="flex items-center gap-1">
+                                    <input
+                                      type="date"
+                                      value={item.expireDate || ""}
+                                      onChange={(e) => handleInlineEdit(item.id, "expireDate", e.target.value)}
+                                      className="w-28 bg-transparent hover:bg-slate-100/70 focus:bg-white px-1.5 py-1 border border-transparent focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 rounded-lg focus:outline-none font-mono text-[11px] font-semibold text-slate-700 transition-all"
+                                      title="คลิกเพื่อตั้งค่าวันหมดอายุ"
+                                    />
+                                    {item.expireDate && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleInlineEdit(item.id, "expireDate", "")}
+                                        className="text-slate-300 hover:text-red-500 text-[10px] p-0.5 rounded cursor-pointer"
+                                        title="ล้างวันหมดอายุ"
+                                      >
+                                        ✕
+                                      </button>
+                                    )}
                                   </div>
                                 </td>
 
