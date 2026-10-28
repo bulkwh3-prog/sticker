@@ -14,14 +14,6 @@ import { Sticker } from "./components/Sticker";
 import { ScannerModal } from "./components/ScannerModal";
 import { parseExcelRows, downloadTemplate } from "./utils/excelParser";
 import { 
-  buildCompositeBarcode, 
-  build1DCompactBarcode,
-  parseScannedBarcode, 
-  isCompositeBarcodeText, 
-  BarcodeMode,
-  CodeType 
-} from "./utils/barcodeHelper";
-import { 
   Printer, 
   Upload, 
   Download, 
@@ -40,11 +32,7 @@ import {
   ChevronRight,
   ClipboardList,
   Flame,
-  UserCheck,
-  QrCode,
-  Sliders,
-  Copy,
-  Barcode as BarcodeIcon
+  UserCheck
 } from "lucide-react";
 
 export default function App() {
@@ -53,14 +41,6 @@ export default function App() {
   const [history, setHistory] = useState<PrintHistoryEntry[]>([]);
   const [activePreviewId, setActivePreviewId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  
-  // Barcode / QR Encoding Mode & Auto-compose
-  const [codeType, setCodeType] = useState<CodeType>(() => {
-    const saved = localStorage.getItem("4x4_sticker_code_type");
-    return saved === "barcode1d" ? "barcode1d" : "qrcode";
-  });
-  const [barcodeMode, setBarcodeMode] = useState<BarcodeMode>("full");
-  const [autoComposeBarcode, setAutoComposeBarcode] = useState<boolean>(true);
   
   // Form states
   const [formData, setFormData] = useState<Omit<StickerItem, "id" | "copies" | "selected">>({
@@ -154,10 +134,6 @@ export default function App() {
     localStorage.setItem("4x4_sticker_print_history", JSON.stringify(history));
   }, [history]);
 
-  useEffect(() => {
-    localStorage.setItem("4x4_sticker_code_type", codeType);
-  }, [codeType]);
-
   // Alert dismiss helper
   const triggerAlert = (message: string, type: "success" | "error" | "info" = "success") => {
     setAlert({ message, type });
@@ -169,24 +145,10 @@ export default function App() {
   // --- Form Handlers ---
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => {
-      const updated = {
-        ...prev,
-        [name]: name === "quantity" ? Math.max(0, parseInt(value, 10) || 0) : value
-      };
-      // If auto-compose is enabled and the user modified one of the 6 fields, sync the QR code content
-      if (autoComposeBarcode && name !== "barcode" && barcodeMode !== "single") {
-        updated.barcode = buildCompositeBarcode(updated, barcodeMode);
-      }
-      return updated;
-    });
-  };
-
-  // Helper to force-compose 6 fields into formData.barcode
-  const composeFormBarcode = () => {
-    const fullBarcode = buildCompositeBarcode(formData, barcodeMode);
-    setFormData(prev => ({ ...prev, barcode: fullBarcode }));
-    triggerAlert("สร้าง QR Code รวมข้อมูล 6 ช่อง (SAB, จำนวน, น้ำหนัก, วันที่รับ, วันหมดอายุ, ทะเบียน) เข้าฟอร์มแล้ว");
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === "quantity" ? Math.max(0, parseInt(value, 10) || 0) : value
+    }));
   };
 
   const handleFormSubmit = (e: React.FormEvent) => {
@@ -196,20 +158,13 @@ export default function App() {
       return;
     }
 
-    // Determine barcode: if autoComposeBarcode or empty, build full composite barcode
-    let finalBarcode = formData.barcode.trim();
-    if (!finalBarcode || autoComposeBarcode) {
-      finalBarcode = barcodeMode === "single" 
-        ? (formData.barcode.trim() || formData.lpnCode.trim())
-        : buildCompositeBarcode(formData, barcodeMode);
-    }
-
     const newItem: StickerItem = {
       ...formData,
       id: "item_" + Date.now(),
       copies: 1,
       selected: true,
-      barcode: finalBarcode,
+      // If barcode is empty, default to LPN code
+      barcode: formData.barcode.trim() || formData.lpnCode.trim(),
     };
 
     setStickers(prev => [newItem, ...prev]);
@@ -227,17 +182,10 @@ export default function App() {
       sabCode: prev.sabCode,
       productName: "",
       lot: "",
-      barcode: autoComposeBarcode && barcodeMode !== "single" ? buildCompositeBarcode({
-        sabCode: prev.sabCode,
-        quantity: prev.quantity,
-        weight: prev.weight,
-        receiveDate: prev.receiveDate,
-        expireDate: prev.expireDate,
-        carLicense: prev.carLicense,
-      }, barcodeMode) : "",
+      barcode: "",
     }));
 
-    triggerAlert("เพิ่มรายการสติ๊กเกอร์เรียบร้อยแล้ว (QR Code บรรจุข้อมูลครบ 6 ช่อง)");
+    triggerAlert("เพิ่มรายการสติ๊กเกอร์เรียบร้อยแล้ว");
   };
 
   // --- Camera Scan Handlers ---
@@ -249,98 +197,35 @@ export default function App() {
     });
   };
 
-  const handleScanSuccess = (decodedText: string, field: string, fullData?: Partial<StickerItem>) => {
+  const handleScanSuccess = (decodedText: string, field: string) => {
     const targetField = field as keyof StickerItem;
-    const parsedBarcode = parseScannedBarcode(decodedText);
-    const hasComposite = Boolean(fullData || parsedBarcode.isComposite);
-    const compositeData: Partial<StickerItem> | null = fullData 
-      ? fullData 
-      : parsedBarcode.isComposite 
-      ? {
-          sabCode: parsedBarcode.sabCode,
-          quantity: parsedBarcode.quantity,
-          weight: parsedBarcode.weight,
-          receiveDate: parsedBarcode.receiveDate,
-          expireDate: parsedBarcode.expireDate,
-          carLicense: parsedBarcode.carLicense,
-          lpnCode: parsedBarcode.lpnCode,
-        }
-      : null;
     
     // Case 1: Editing existing item in the table list
     if (scannerConfig.targetItemId) {
       setStickers(prev => prev.map(item => {
         if (item.id === scannerConfig.targetItemId) {
-          if (hasComposite && compositeData) {
-            return {
-              ...item,
-              sabCode: compositeData.sabCode !== undefined && compositeData.sabCode !== "-" ? compositeData.sabCode : item.sabCode,
-              quantity: compositeData.quantity !== undefined ? compositeData.quantity : item.quantity,
-              weight: compositeData.weight !== undefined && compositeData.weight !== "-" ? compositeData.weight : item.weight,
-              receiveDate: compositeData.receiveDate !== undefined && compositeData.receiveDate !== "-" ? compositeData.receiveDate : item.receiveDate,
-              expireDate: compositeData.expireDate !== undefined && compositeData.expireDate !== "-" ? compositeData.expireDate : item.expireDate,
-              carLicense: compositeData.carLicense !== undefined && compositeData.carLicense !== "-" ? compositeData.carLicense : item.carLicense,
-              lpnCode: compositeData.lpnCode || item.lpnCode,
-              barcode: decodedText,
-            };
-          } else {
-            const updated = { ...item, [targetField]: decodedText };
-            if (targetField === "lpnCode" && (!item.barcode || item.barcode === item.lpnCode)) {
-              updated.barcode = decodedText;
-            }
-            return updated;
-          }
-        }
-        return item;
-      }));
-      triggerAlert(
-        hasComposite 
-          ? "สแกนสำเร็จ: ดึงข้อมูลครบทั้ง 6 ช่อง (SAB, จำนวน, น้ำหนัก, วันที่รับ, วันหมดอายุ, ทะเบียน) เรียบร้อยแล้ว!" 
-          : "สแกนสำเร็จ: อัปเดตช่องข้อมูลแล้ว"
-      );
-    } 
-    // Case 2: Adding via manual form
-    else {
-      setFormData(prev => {
-        if (hasComposite && compositeData) {
-          return {
-            ...prev,
-            sabCode: compositeData.sabCode !== undefined && compositeData.sabCode !== "-" ? compositeData.sabCode : prev.sabCode,
-            quantity: compositeData.quantity !== undefined ? compositeData.quantity : prev.quantity,
-            weight: compositeData.weight !== undefined && compositeData.weight !== "-" ? compositeData.weight : prev.weight,
-            receiveDate: compositeData.receiveDate !== undefined && compositeData.receiveDate !== "-" ? compositeData.receiveDate : prev.receiveDate,
-            expireDate: compositeData.expireDate !== undefined && compositeData.expireDate !== "-" ? compositeData.expireDate : prev.expireDate,
-            carLicense: compositeData.carLicense !== undefined && compositeData.carLicense !== "-" ? compositeData.carLicense : prev.carLicense,
-            lpnCode: compositeData.lpnCode || prev.lpnCode,
-            barcode: decodedText,
-          };
-        } else {
-          const updated = { ...prev, [targetField]: decodedText };
-          if (targetField === "lpnCode" && !prev.barcode) {
+          const updated = { ...item, [targetField]: decodedText };
+          // If updating LPN and barcode was empty/matching, sync barcode
+          if (targetField === "lpnCode" && (!item.barcode || item.barcode === item.lpnCode)) {
             updated.barcode = decodedText;
           }
           return updated;
         }
+        return item;
+      }));
+      triggerAlert(`สแกนสำเร็จ: อัปเดตช่องข้อมูลแล้ว`);
+    } 
+    // Case 2: Adding via manual form
+    else {
+      setFormData(prev => {
+        const updated = { ...prev, [targetField]: decodedText };
+        if (targetField === "lpnCode" && !prev.barcode) {
+          updated.barcode = decodedText;
+        }
+        return updated;
       });
-      triggerAlert(
-        hasComposite 
-          ? "สแกนสำเร็จ: ดึงข้อมูลครบทั้ง 6 ช่อง (SAB, จำนวน, น้ำหนัก, วันที่รับ, วันหมดอายุ, ทะเบียน) เข้าฟอร์มแล้ว!" 
-          : "สแกนสำเร็จ: นำรหัสใส่ในฟอร์มแล้ว"
-      );
+      triggerAlert(`สแกนสำเร็จ: นำรหัสใส่ในฟอร์มแล้ว`);
     }
-  };
-
-  // Batch convert all stickers to full 6-field composite barcode
-  const batchConvertAllToFullBarcode = () => {
-    if (stickers.length === 0) {
-      triggerAlert("ยังไม่มีรายการสติ๊กเกอร์ในตาราง", "info");
-      return;
-    }
-    setStickers(prev => prev.map(item => ({
-      ...item,
-      barcode: buildCompositeBarcode(item, barcodeMode),
-    })));
-    triggerAlert(`สร้างและปรับปรุง QR Code รวมข้อมูล 6 ช่องให้ทุกรายการ (${stickers.length} รายการ) สำเร็จแล้ว!`);
   };
 
   // --- Excel Import Handler ---
@@ -608,7 +493,7 @@ export default function App() {
               key={`print-${item.id}-${i}`} 
               className="sticker-print-page"
             >
-              <Sticker item={item} isPreview={false} barcodeMode={barcodeMode} codeType={codeType} />
+              <Sticker item={item} isPreview={false} />
             </div>
           ));
         })}
@@ -890,33 +775,14 @@ export default function App() {
 
                       {/* Barcode Value */}
                       <div>
-                        <div className="flex justify-between items-center mb-1">
-                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                            คิวอาร์โค้ดสินค้า (QR Code Data)
-                          </label>
-                          <label className="flex items-center gap-1 text-[10px] text-indigo-600 font-bold cursor-pointer select-none">
-                            <input
-                              type="checkbox"
-                              checked={autoComposeBarcode}
-                              onChange={(e) => {
-                                setAutoComposeBarcode(e.target.checked);
-                                if (e.target.checked) {
-                                  composeFormBarcode();
-                                }
-                              }}
-                              className="w-3 h-3 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
-                            />
-                            <span>รวม 6 ข้อมูลอัตโนมัติ</span>
-                          </label>
-                        </div>
-
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">คิวอาร์โค้ดสินค้า (QR Code to print)</label>
                         <div className="flex gap-1.5">
                           <input
                             type="text"
                             name="barcode"
                             value={formData.barcode}
                             onChange={handleInputChange}
-                            placeholder="ปล่อยว่างเพื่อรวมข้อมูล 6 ช่องอัตโนมัติ"
+                            placeholder="ปล่อยว่างเพื่อเลียนแบบ LPN"
                             className="flex-1 min-w-0 bg-slate-50/50 hover:bg-slate-50 focus:bg-white text-slate-800 border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 rounded-xl py-2 px-3.5 transition-all text-xs font-mono focus:outline-none placeholder-slate-400"
                           />
                           <button
@@ -928,51 +794,42 @@ export default function App() {
                             <Camera className="w-4 h-4" />
                           </button>
                         </div>
-
-                        {/* 1-Click 6-Field Generator & Quick Mimic Options */}
-                        <div className="mt-1.5 flex flex-wrap gap-1 items-center">
+                        {/* Quick Mimic Options */}
+                        <div className="mt-1 flex flex-wrap gap-1 items-center">
+                          <span className="text-[9px] font-bold text-slate-400 mr-1">เลียนแบบ:</span>
                           <button
                             type="button"
-                            onClick={composeFormBarcode}
-                            className="text-[10px] bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold px-2 py-0.5 rounded-lg shadow-xs transition-all cursor-pointer flex items-center gap-1"
-                            title="สร้าง QR Code ที่บรรจุข้อมูล Sabcode, จำนวน, น้ำหนัก, วันที่รับสินค้า, วันที่หมดอายุ, ทะเบียน"
-                          >
-                            <QrCode className="w-3 h-3" />
-                            <span>⚡ รวม 6 ข้อมูลลง QR Code</span>
-                          </button>
-                          
-                          <span className="text-[9px] font-bold text-slate-400 ml-1 mr-0.5">หรือ:</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setAutoComposeBarcode(false);
-                              setFormData(prev => ({ ...prev, barcode: prev.lpnCode }));
-                            }}
+                            onClick={() => setFormData(prev => ({ ...prev, barcode: prev.lpnCode }))}
                             className="text-[10px] bg-slate-100 hover:bg-indigo-100 hover:text-indigo-600 text-slate-600 px-1.5 py-0.5 rounded font-medium transition-all cursor-pointer"
-                            title="ใช้เฉพาะรหัส LPN"
+                            title="เลียนแบบรหัส LPN"
                           >
-                            เฉพาะ LPN
+                            LPN
                           </button>
                           <button
                             type="button"
-                            onClick={() => {
-                              setAutoComposeBarcode(false);
-                              setFormData(prev => ({ ...prev, barcode: prev.sabCode }));
-                            }}
+                            onClick={() => setFormData(prev => ({ ...prev, barcode: prev.sabCode }))}
                             className="text-[10px] bg-slate-100 hover:bg-indigo-100 hover:text-indigo-600 text-slate-600 px-1.5 py-0.5 rounded font-medium transition-all cursor-pointer"
-                            title="ใช้เฉพาะรหัส SAB Code"
+                            title="เลียนแบบรหัส SAB Code"
                           >
-                            เฉพาะ SAB
+                            SAB Code
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormData(prev => ({ ...prev, barcode: String(prev.quantity) }))}
+                            className="text-[10px] bg-slate-100 hover:bg-indigo-100 hover:text-indigo-600 text-slate-600 px-1.5 py-0.5 rounded font-medium transition-all cursor-pointer"
+                            title="เลียนแบบจำนวน"
+                          >
+                            จำนวน
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormData(prev => ({ ...prev, barcode: prev.weight }))}
+                            className="text-[10px] bg-slate-100 hover:bg-indigo-100 hover:text-indigo-600 text-slate-600 px-1.5 py-0.5 rounded font-medium transition-all cursor-pointer"
+                            title="เลียนแบบน้ำหนัก"
+                          >
+                            น้ำหนัก
                           </button>
                         </div>
-
-                        {/* Status feedback */}
-                        {isCompositeBarcodeText(formData.barcode) && (
-                          <div className="mt-1 text-[9px] text-emerald-600 font-bold flex items-center gap-1">
-                            <Check className="w-3 h-3" />
-                            <span>QR Code บรรจุข้อมูลครบ 6 ช่อง (SAB, จำนวน, น้ำหนัก, วันที่รับ, วันหมดอายุ, ทะเบียน)</span>
-                          </div>
-                        )}
                       </div>
 
                       {/* Product Name */}
@@ -1241,18 +1098,7 @@ export default function App() {
                       />
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
-                      <button
-                        type="button"
-                        onClick={batchConvertAllToFullBarcode}
-                        disabled={stickers.length === 0}
-                        className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 disabled:opacity-40 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
-                        title="สร้าง QR Code รวมข้อมูล 6 ช่อง (SAB, จำนวน, น้ำหนัก, วันที่รับ, วันหมดอายุ, ทะเบียน) ให้กับทุกแถวในตาราง"
-                      >
-                        <QrCode className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>⚡ แปลง QR ทุกรายการเป็นข้อมูล 6 ช่อง</span>
-                      </button>
-
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                       <button
                         type="button"
                         onClick={deleteSelectedStickers}
@@ -1432,44 +1278,26 @@ export default function App() {
 
                                 {/* Barcode / Action to scan or select preview */}
                                 <td className="p-3 text-center">
-                                  <div className="flex flex-col items-center gap-1 justify-center">
-                                    <div className="flex items-center gap-1">
-                                      <button
-                                        type="button"
-                                        onClick={() => setActivePreviewId(item.id)}
-                                        className={`px-2 py-0.5 text-[10px] rounded-lg font-bold transition-all cursor-pointer ${
-                                          isActivePreview
-                                            ? "bg-indigo-600 text-white shadow-xs"
-                                            : isCompositeBarcodeText(item.barcode)
-                                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
-                                            : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
-                                        }`}
-                                        title={isCompositeBarcodeText(item.barcode) ? "QR Code บรรจุข้อมูลครบ 6 ช่องแล้ว" : "คลิกดูตัวอย่างสติ๊กเกอร์"}
-                                      >
-                                        {isCompositeBarcodeText(item.barcode) ? "✓ รวม 6 ช่อง" : "ดูตัวอย่าง"}
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => openScanner("barcode", item.id)}
-                                        className="p-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-500 hover:text-slate-700 cursor-pointer"
-                                        title="สแกนอัปเดต QR Code แถวนี้"
-                                      >
-                                        <Camera className="w-3 h-3" />
-                                      </button>
-                                    </div>
-                                    {!isCompositeBarcodeText(item.barcode) && (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          handleInlineEdit(item.id, "barcode", buildCompositeBarcode(item, barcodeMode));
-                                          triggerAlert(`แปลง QR Code แถว ${item.lpnCode || item.id} เป็นข้อมูลครบ 6 ช่องแล้ว`);
-                                        }}
-                                        className="text-[9px] text-emerald-600 hover:text-emerald-700 font-bold hover:underline cursor-pointer"
-                                        title="แปลง QR Code แถวนี้ให้มีข้อมูลครบ 6 ช่อง (SAB, จำนวน, น้ำหนัก, วันที่รับ, วันหมดอายุ, ทะเบียน)"
-                                      >
-                                        + รวม 6 ช่อง
-                                      </button>
-                                    )}
+                                  <div className="flex items-center gap-1.5 justify-center">
+                                    <button
+                                      type="button"
+                                      onClick={() => setActivePreviewId(item.id)}
+                                      className={`px-2.5 py-1 text-[10px] rounded-lg font-bold transition-all cursor-pointer ${
+                                        isActivePreview
+                                          ? "bg-indigo-600 text-white shadow-xs"
+                                          : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
+                                      }`}
+                                    >
+                                      {item.barcode ? "ดูตัวอย่าง" : "เพิ่มโค้ด"}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => openScanner("barcode", item.id)}
+                                      className="p-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-500 hover:text-slate-700 cursor-pointer"
+                                      title="สแกนอัปเดต QR Code แถวนี้"
+                                    >
+                                      <Camera className="w-3.5 h-3.5" />
+                                    </button>
                                   </div>
                                 </td>
 
@@ -1524,7 +1352,7 @@ export default function App() {
                       {/* Scaled Sticker container simulating 4x4 */}
                       <div className="w-full bg-slate-100/70 p-4 rounded-2xl border border-slate-200 flex justify-center items-center relative overflow-hidden shadow-inner">
                         <div className="w-full max-w-[280px] shadow-2xl rounded-xl transition-all duration-300 hover:scale-[1.01]">
-                          <Sticker item={activeSticker} isPreview={true} barcodeMode={barcodeMode} codeType={codeType} />
+                          <Sticker item={activeSticker} isPreview={true} />
                         </div>
                       </div>
 
@@ -1563,169 +1391,7 @@ export default function App() {
                   )}
                 </div>
 
-                {/* 2. BARCODE / QR CODE TYPE & PAYLOAD CONFIGURATION CARD */}
-                <div className="bg-white border border-slate-200/60 rounded-3xl p-5 shadow-xs space-y-4">
-                  <div className="border-b border-slate-100 pb-2.5 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 bg-emerald-50 rounded-lg text-emerald-600 border border-emerald-100">
-                        {codeType === "barcode1d" ? <BarcodeIcon className="w-4 h-4" /> : <QrCode className="w-4 h-4" />}
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-slate-800 text-xs">ประเภทและข้อมูลในบาร์โค้ด</h4>
-                        <p className="text-[10px] text-slate-400">รองรับอ่านข้อมูลทั้ง 6 ช่องผ่านเครื่องสแกน</p>
-                      </div>
-                    </div>
-                    <span className="text-[10px] bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
-                      ครบ 6 ช่อง
-                    </span>
-                  </div>
-
-                  {/* Code Type Switcher: QR Code (2D) vs 1D Barcode (Code 128) */}
-                  <div className="space-y-1.5">
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      เลือกรูปแบบโค้ดที่ต้องการพิมพ์:
-                    </label>
-                    <div className="grid grid-cols-2 gap-2 bg-slate-100/90 p-1 rounded-2xl border border-slate-200">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCodeType("qrcode");
-                          triggerAlert("เปลี่ยนเป็น QR Code (2D) - แนะนำสำหรับข้อมูล 6 ช่องและภาษาไทย");
-                        }}
-                        className={`flex items-center justify-center gap-1.5 py-2 px-2 text-xs rounded-xl font-bold transition-all cursor-pointer ${
-                          codeType === "qrcode"
-                            ? "bg-white text-emerald-700 shadow-xs border border-emerald-300"
-                            : "text-slate-600 hover:text-slate-900"
-                        }`}
-                      >
-                        <QrCode className="w-4 h-4 text-emerald-600" />
-                        <span>QR Code (2D)</span>
-                        <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1 py-0.2 rounded font-normal">แนะนำ</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCodeType("barcode1d");
-                          triggerAlert("เปลี่ยนเป็นบาร์โค้ดแท่ง (1D Code 128) แบบ Compact 6 ช่อง");
-                        }}
-                        className={`flex items-center justify-center gap-1.5 py-2 px-2 text-xs rounded-xl font-bold transition-all cursor-pointer ${
-                          codeType === "barcode1d"
-                            ? "bg-white text-indigo-700 shadow-xs border border-indigo-300"
-                            : "text-slate-600 hover:text-slate-900"
-                        }`}
-                      >
-                        <BarcodeIcon className="w-4 h-4 text-indigo-600" />
-                        <span>บาร์โค้ดแท่ง 1D</span>
-                      </button>
-                    </div>
-
-                    {/* Explanatory badge depending on chosen codeType */}
-                    {codeType === "barcode1d" ? (
-                      <div className="text-[10px] text-amber-800 bg-amber-50/80 p-2.5 rounded-xl border border-amber-200/80 leading-relaxed font-medium space-y-1">
-                        <div className="flex items-center gap-1.5 font-bold text-amber-900">
-                          <BarcodeIcon className="w-3.5 h-3.5" />
-                          <span>บาร์โค้ดแท่ง 1 มิติ (Code 128 Compact)</span>
-                        </div>
-                        <p>
-                          บรรจุ 6 ช่องด้วยรหัสย่อ ASCII คั่นด้วย <code>*</code> (SAB*จำนวน*น้ำหนัก*วันรับ*วันหมดอายุ*ทะเบียน) ไม่ให้แถบกว้างเกินขนาด 4 นิ้ว โดยเครื่องสแกนบาร์โค้ดยิงแล้วแยก 6 ช่องได้ทันที
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="text-[10px] text-emerald-800 bg-emerald-50/80 p-2.5 rounded-xl border border-emerald-200/80 leading-relaxed font-medium space-y-1">
-                        <div className="flex items-center gap-1.5 font-bold text-emerald-900">
-                          <QrCode className="w-3.5 h-3.5" />
-                          <span>คิวอาร์โค้ด 2 มิติ (2D QR Code)</span>
-                        </div>
-                        <p>
-                          เหมาะสมที่สุดสำหรับข้อมูลหลายช่อง รองรับภาษาไทยเต็มรูปแบบ ไม่ล้นขอบ สแกนได้ 360° รวดเร็วแม้สติ๊กเกอร์ยับหรือเปื้อน
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Mode Selector for QR Code */}
-                  {codeType === "qrcode" && (
-                    <div className="space-y-1.5">
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        รูปแบบข้อความใน QR Code:
-                      </label>
-                      <div className="grid grid-cols-3 gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200/70">
-                        <button
-                          type="button"
-                          onClick={() => setBarcodeMode("full")}
-                          className={`py-1 px-1.5 text-[10px] rounded-lg font-bold transition-all cursor-pointer text-center ${
-                            barcodeMode === "full"
-                              ? "bg-white text-emerald-700 shadow-xs border border-emerald-200"
-                              : "text-slate-600 hover:text-slate-900"
-                          }`}
-                          title="ข้อความแยกบรรทัด อ่านง่ายทั้งเครื่องสแกนและมือถือ"
-                        >
-                          ข้อความอ่านง่าย
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setBarcodeMode("compact")}
-                          className={`py-1 px-1.5 text-[10px] rounded-lg font-bold transition-all cursor-pointer text-center ${
-                            barcodeMode === "compact"
-                              ? "bg-white text-indigo-700 shadow-xs border border-indigo-200"
-                              : "text-slate-600 hover:text-slate-900"
-                          }`}
-                          title="คั่นด้วย Pipe (|) กะทัดรัดสำหรับระบบ WMS"
-                        >
-                          คั่น Pipe (|)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setBarcodeMode("single")}
-                          className={`py-1 px-1.5 text-[10px] rounded-lg font-bold transition-all cursor-pointer text-center ${
-                            barcodeMode === "single"
-                              ? "bg-white text-slate-800 shadow-xs border border-slate-300"
-                              : "text-slate-600 hover:text-slate-900"
-                          }`}
-                          title="เฉพาะรหัสเดี่ยวเดิม"
-                        >
-                          เฉพาะรหัสเดี่ยว
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Live Payload Preview for Active Sticker */}
-                  {activeSticker && (
-                    <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-200/70 text-xs">
-                      <div className="flex justify-between items-center mb-1.5">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase">
-                          เนื้อหาที่จะได้เมื่อยิงสแกนเนอร์ ({codeType === "barcode1d" ? "1D Barcode" : "QR Code"}):
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const text = codeType === "barcode1d"
-                              ? build1DCompactBarcode(activeSticker)
-                              : (activeSticker.barcode && isCompositeBarcodeText(activeSticker.barcode)
-                                  ? activeSticker.barcode
-                                  : buildCompositeBarcode(activeSticker, barcodeMode));
-                            navigator.clipboard?.writeText(text);
-                            triggerAlert(`คัดลอกข้อมูล ${codeType === "barcode1d" ? "บาร์โค้ด 1D" : "QR Code"} ลงคลิปบอร์ดแล้ว`);
-                          }}
-                          className="flex items-center gap-1 text-[10px] text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer"
-                        >
-                          <Copy className="w-3 h-3" />
-                          <span>คัดลอก</span>
-                        </button>
-                      </div>
-                      <pre className="text-[10px] font-mono bg-white p-2.5 rounded-lg border border-slate-200 text-slate-800 overflow-x-auto whitespace-pre-wrap leading-relaxed select-all max-h-36 overflow-y-auto">
-                        {codeType === "barcode1d"
-                          ? build1DCompactBarcode(activeSticker)
-                          : (activeSticker.barcode && isCompositeBarcodeText(activeSticker.barcode)
-                              ? activeSticker.barcode
-                              : buildCompositeBarcode(activeSticker, barcodeMode))}
-                      </pre>
-                    </div>
-                  )}
-                </div>
-
-                {/* 3. PRINT ACTION DESK */}
+                {/* 2. PRINT ACTION DESK */}
                 <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-xs space-y-4">
                   <div className="border-b border-slate-100 pb-3 flex items-center gap-2">
                     <div className="p-1 bg-indigo-50 rounded-lg text-indigo-600 border border-indigo-100">
