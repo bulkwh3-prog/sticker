@@ -1,7 +1,6 @@
 import { StickerItem } from "../types";
 
 export type BarcodeMode = "full" | "compact" | "single";
-export type CodeType = "qrcode" | "barcode1d";
 
 export interface ParsedBarcodeResult {
   isComposite: boolean;
@@ -63,33 +62,6 @@ export function buildCompositeBarcode(
 }
 
 /**
- * Builds a compact 1D Barcode (Code 128) string containing all 6 fields:
- * SAB Code, จำนวน, น้ำหนัก, วันที่รับ, วันหมดอายุ, ทะเบียน
- * Note: 1D barcodes only support ASCII (no Thai characters) and length should be under 40-45 chars
- * to fit nicely across the 4-inch sticker width without scanner reading failures.
- */
-export function build1DCompactBarcode(item: Partial<StickerItem>): string {
-  // Extract alphanumeric characters for SAB
-  const sab = (item.sabCode || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 14);
-  const qty = item.quantity !== undefined ? item.quantity : 0;
-  // Weight digits
-  const wt = (item.weight || "").replace(/[^0-9.]/g, "").slice(0, 6);
-  // Clean date to YYMMDD or compact numbers
-  const cleanDate = (d?: string) => {
-    if (!d) return "";
-    const digits = d.replace(/[^0-9]/g, "");
-    return digits.length >= 6 ? digits.slice(-6) : digits;
-  };
-  const rec = cleanDate(item.receiveDate);
-  const exp = cleanDate(item.expireDate);
-  // Car license plate: keep alphanumeric, numbers and dashes (e.g. 71-2139)
-  const car = (item.carLicense || "").replace(/[^a-zA-Z0-9-]/g, "").slice(0, 10);
-
-  // Delimited with asterisk (*) standard
-  return `${sab || "0"}*${qty}*${wt || "0"}*${rec || "0"}*${exp || "0"}*${car || "0"}`;
-}
-
-/**
  * Checks if a string contains composite barcode data
  */
 export function isCompositeBarcodeText(text: string): boolean {
@@ -98,7 +70,6 @@ export function isCompositeBarcodeText(text: string): boolean {
   return (
     (t.includes("\n") && (t.includes("SAB") || t.includes("จำนวน") || t.includes("น้ำหนัก") || t.includes("ทะเบียน") || t.includes("วันที่รับ") || t.includes("วันหมดอายุ"))) ||
     (t.includes("|") && (t.includes("SAB:") || t.includes("QTY:") || t.includes("WT:") || t.includes("REC:") || t.includes("EXP:") || t.includes("CAR:"))) ||
-    (t.includes("*") && t.split("*").length >= 4) ||
     (t.startsWith("{") && t.endsWith("}"))
   );
 }
@@ -159,53 +130,7 @@ export function parseScannedBarcode(text: string): ParsedBarcodeResult {
     }
   }
 
-  // 2. Compact Asterisk Delimited (1D Barcode format: SAB*QTY*WT*REC*EXP*CAR)
-  if (trimmed.includes("*")) {
-    const starParts = trimmed.split("*").map(s => s.trim());
-    if (starParts.length >= 4) {
-      let labeledCount = 0;
-      starParts.forEach((part) => {
-        if (/^S(?:AB)?:/i.test(part)) { result.sabCode = part.replace(/^S(?:AB)?:/i, "").trim(); labeledCount++; }
-        else if (/^Q(?:TY)?:/i.test(part)) { result.quantity = parseInt(part.replace(/^Q(?:TY)?:/i, "").trim(), 10) || 0; labeledCount++; }
-        else if (/^W(?:T)?:/i.test(part)) { result.weight = part.replace(/^W(?:T)?:/i, "").trim(); labeledCount++; }
-        else if (/^R(?:EC)?:/i.test(part)) { result.receiveDate = part.replace(/^R(?:EC)?:/i, "").trim(); labeledCount++; }
-        else if (/^E(?:XP)?:/i.test(part)) { result.expireDate = part.replace(/^E(?:XP)?:/i, "").trim(); labeledCount++; }
-        else if (/^C(?:AR)?:/i.test(part)) { result.carLicense = part.replace(/^C(?:AR)?:/i, "").trim(); labeledCount++; }
-      });
-
-      if (labeledCount >= 2) {
-        result.fieldsFound = labeledCount;
-        result.isComposite = true;
-        return result;
-      }
-
-      // If positional (no labels): [SAB, QTY, WT, REC, EXP, CAR]
-      if (starParts.length >= 5) {
-        if (starParts[0] && starParts[0] !== "-") result.sabCode = starParts[0];
-        if (starParts[1] && !isNaN(Number(starParts[1]))) result.quantity = parseInt(starParts[1], 10);
-        if (starParts[2] && starParts[2] !== "-") result.weight = starParts[2];
-        if (starParts[3] && starParts[3] !== "-") result.receiveDate = starParts[3];
-        if (starParts[4] && starParts[4] !== "-") result.expireDate = starParts[4];
-        if (starParts[5] && starParts[5] !== "-") result.carLicense = starParts[5];
-
-        let count = 0;
-        if (result.sabCode) count++;
-        if (result.quantity !== undefined) count++;
-        if (result.weight) count++;
-        if (result.receiveDate) count++;
-        if (result.expireDate) count++;
-        if (result.carLicense) count++;
-
-        result.fieldsFound = count;
-        if (count >= 2) {
-          result.isComposite = true;
-          return result;
-        }
-      }
-    }
-  }
-
-  // 3. Delimited (newlines or pipes or semicolons)
+  // 2. Delimited (newlines or pipes or semicolons)
   const isPipe = trimmed.includes("|");
   const isSemi = trimmed.includes(";");
   const lines = trimmed.includes("\n") 

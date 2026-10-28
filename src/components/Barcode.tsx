@@ -19,22 +19,15 @@ export const Barcode: React.FC<BarcodeProps> = ({
   useEffect(() => {
     if (elementRef.current && value) {
       try {
-        // Code 128 only supports ASCII (characters 32-126). Strip non-ASCII (such as Thai characters) to prevent errors
-        const safeValue = value.replace(/[^\x20-\x7E]/g, "").trim();
-        if (!safeValue) return;
-
-        // Auto-adjust width if text is long to prevent barcode overflow on 4" label
-        const calculatedWidth = safeValue.length > 35 ? Math.min(width, 1.05) : width;
-
-        JsBarcode(elementRef.current, safeValue, {
+        JsBarcode(elementRef.current, value, {
           format: "CODE128",
-          width: calculatedWidth,
+          width: width,
           height: height,
           displayValue: true,
           fontSize: fontSize,
           font: "monospace",
           textMargin: 2,
-          margin: 2,
+          margin: 4,
           background: "transparent",
         });
       } catch (err) {

@@ -1,28 +1,15 @@
 import React from "react";
 import { StickerItem } from "../types";
 import { QRCode } from "./QRCode";
-import { Barcode } from "./Barcode";
-import { 
-  buildCompositeBarcode, 
-  build1DCompactBarcode, 
-  isCompositeBarcodeText, 
-  BarcodeMode, 
-  CodeType 
-} from "../utils/barcodeHelper";
+import { buildCompositeBarcode, isCompositeBarcodeText, BarcodeMode } from "../utils/barcodeHelper";
 
 interface StickerProps {
   item: StickerItem;
   isPreview?: boolean; // If true, formatted for UI preview; if false, fits the 101.6mm x 101.6mm thermal printer layout.
   barcodeMode?: BarcodeMode; // "full" (all 6 fields: Sabcode, จำนวน, น้ำหนัก, วันที่รับ, วันหมดอายุ, ทะเบียน)
-  codeType?: CodeType; // "qrcode" (2D) or "barcode1d" (1D Barcode Code 128)
 }
 
-export const Sticker: React.FC<StickerProps> = ({ 
-  item, 
-  isPreview = false, 
-  barcodeMode = "full",
-  codeType = "qrcode"
-}) => {
+export const Sticker: React.FC<StickerProps> = ({ item, isPreview = false, barcodeMode = "full" }) => {
   const {
     lpnCode,
     quantity,
@@ -45,14 +32,6 @@ export const Sticker: React.FC<StickerProps> = ({
       return barcode;
     }
     return buildCompositeBarcode(item, (barcodeMode || "full") as BarcodeMode);
-  }, [item, barcode, lpnCode, barcodeMode]);
-
-  // Compute the 1D Barcode payload (compact ASCII for Code 128)
-  const barcode1DValue = React.useMemo(() => {
-    if (barcodeMode === "single") {
-      return (barcode || lpnCode || "SAMPLE").replace(/[^\x20-\x7E]/g, "");
-    }
-    return build1DCompactBarcode(item);
   }, [item, barcode, lpnCode, barcodeMode]);
 
   return (
@@ -104,23 +83,9 @@ export const Sticker: React.FC<StickerProps> = ({
         </span>
       </div>
 
-      {/* 3. Centered Code Section (QR Code or 1D Barcode) */}
-      <div 
-        className="flex justify-center items-center my-1.5 bg-white overflow-hidden"
-        style={{ minHeight: codeType === "barcode1d" ? "68px" : "80px" }}
-      >
-        {codeType === "barcode1d" ? (
-          <div className="w-full flex flex-col items-center justify-center px-1">
-            <Barcode 
-              value={barcode1DValue} 
-              height={40} 
-              width={barcode1DValue.length > 35 ? 1.05 : 1.25} 
-              fontSize={8.5} 
-            />
-          </div>
-        ) : (
-          <QRCode value={qrValue} size={90} isPreview={true} />
-        )}
+      {/* 3. Centered QR Code Section */}
+      <div className="flex justify-center items-center my-1.5 bg-white">
+        <QRCode value={qrValue} size={90} isPreview={true} />
       </div>
 
       {/* 4. Middle Details: Qty, Weight, Date, Loc, Car License */}
