@@ -168,18 +168,32 @@ export const Sticker: React.FC<StickerProps> = ({ item, isPreview = false, barco
 
         {/* Product Name Line */}
         <div
-          className="text-[10px] md:text-xs leading-tight mt-2 line-clamp-2 min-h-[1.5em]"
+          className="text-[10px] md:text-xs leading-tight line-clamp-2 min-h-[1.5em]"
           title={productName}
-          style={{ width: "238px", height: "23px" }}
+          style={{ width: "238px", height: "15px", marginTop: "9px" }}
         >
           <span className="font-bold">Name:</span>
-          <span className="font-extrabold ml-1.5" style={{ fontSize: "14px" }}>{productName || "ไม่ได้ระบุชื่อสินค้า"}</span>
+          <span
+            className="font-extrabold"
+            style={{
+              fontSize: "14px",
+              paddingTop: "0px",
+              paddingBottom: "0px",
+              paddingRight: "0px",
+              marginLeft: "1px",
+              marginTop: "0px",
+              marginBottom: "0px",
+              marginRight: "0px",
+            }}
+          >
+            {productName || "ไม่ได้ระบุชื่อสินค้า"}
+          </span>
         </div>
 
         {/* Lot Line (Huge Number value) */}
         <div
-          className="flex items-baseline mt-2 leading-none"
-          style={{ marginRight: "0px", marginLeft: "0px", marginTop: "0px" }}
+          className="flex items-baseline leading-none"
+          style={{ marginRight: "0px", marginLeft: "0px", marginTop: "3px", paddingTop: "0px" }}
         >
           <span className="text-[10px] md:text-xs font-bold">Lot :</span>
           <span className="font-mono font-extrabold text-2xl ml-3 text-black leading-none" style={{ fontSize: "17px" }}>

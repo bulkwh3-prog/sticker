@@ -44,8 +44,8 @@ export const QRCode: React.FC<QRCodeProps> = ({ value, size = 100, isPreview = f
             ? {
                 fontSize: "11px",
                 lineHeight: "16.5px",
-                height: "81px",
-                width: "80px",
+                height: "100px",
+                width: "100px",
                 marginRight: "0px",
                 marginBottom: "-14px",
                 marginTop: "0px",
