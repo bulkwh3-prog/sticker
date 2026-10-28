@@ -13,8 +13,9 @@ export const QRCode: React.FC<QRCodeProps> = ({ value, size = 100, isPreview = f
   useEffect(() => {
     if (canvasRef.current && value) {
       QRCodeLib.toCanvas(canvasRef.current, value, {
-        width: size,
+        width: Math.max(180, size * 2),
         margin: 1,
+        errorCorrectionLevel: "M",
         color: {
           dark: "#000000",
           light: "#ffffff",

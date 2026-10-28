@@ -1,13 +1,15 @@
 import React from "react";
 import { StickerItem } from "../types";
 import { QRCode } from "./QRCode";
+import { buildCompositeBarcode, isCompositeBarcodeText, BarcodeMode } from "../utils/barcodeHelper";
 
 interface StickerProps {
   item: StickerItem;
   isPreview?: boolean; // If true, formatted for UI preview; if false, fits the 101.6mm x 101.6mm thermal printer layout.
+  barcodeMode?: BarcodeMode; // "full" (all 6 fields: Sabcode, จำนวน, น้ำหนัก, วันที่รับ, วันหมดอายุ, ทะเบียน)
 }
 
-export const Sticker: React.FC<StickerProps> = ({ item, isPreview = false }) => {
+export const Sticker: React.FC<StickerProps> = ({ item, isPreview = false, barcodeMode = "full" }) => {
   const {
     lpnCode,
     quantity,
@@ -20,6 +22,17 @@ export const Sticker: React.FC<StickerProps> = ({ item, isPreview = false }) => 
     lot,
     barcode,
   } = item;
+
+  // Compute the QR code payload ensuring all 6 fields (Sabcode, จำนวน, น้ำหนัก, วันที่รับ, วันหมดอายุ, ทะเบียน) are encoded
+  const qrValue = React.useMemo(() => {
+    if (barcodeMode === "single") {
+      return barcode || lpnCode || "SAMPLE-QRCODE";
+    }
+    if (barcode && isCompositeBarcodeText(barcode)) {
+      return barcode;
+    }
+    return buildCompositeBarcode(item, (barcodeMode || "full") as BarcodeMode);
+  }, [item, barcode, lpnCode, barcodeMode]);
 
   return (
     <div
@@ -72,7 +85,7 @@ export const Sticker: React.FC<StickerProps> = ({ item, isPreview = false }) => 
 
       {/* 3. Centered QR Code Section */}
       <div className="flex justify-center items-center my-1.5 bg-white">
-        <QRCode value={barcode || lpnCode || "SAMPLE-QRCODE"} size={90} isPreview={true} />
+        <QRCode value={qrValue} size={90} isPreview={true} />
       </div>
 
       {/* 4. Middle Details: Qty, Weight, Date, Loc, Car License */}
